@@ -1,24 +1,10 @@
-# MVP mirella
-#Projeto de MVP para agiula de ferramentas e soluções em nuvem
+# MVP mirella - Versão Refatorada com Índice Interativo na Sidebar
+# Projeto de MVP para análise de ferramentas e soluções em nuvem
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 import numpy as np
-
-# Atividade 01:
-# Fazer seu primeiro web app com o streamlit, devendo realizar o deploy e postar o link
-# Este app-web deverá conter:
-# 1) Seu nome
-# 2) um tema que pretende tratar
-# 3) A divisão das seções do app, prevendo futura expansão para apresentar dados e gráficos.
-# 4) Bases de dados que imagina usar
-
-st.title("🚀 Iniciando meu primeiro app")
-st.write ('**Distribuição do PROGEFE nas escolas estaduais do ES em 2024.**')
-st.text ('')
-st.markdown ('📌 **Aluna**')
-st.text ('Mirella Carla Mendes Christ')
 
 # Configuração inicial da página
 st.set_page_config(
@@ -27,110 +13,213 @@ st.set_page_config(
     layout="wide"
 )
 
-# Título principal
-st.title("Análise dos valores do PROGEFE em 2024")
+# Função para carregar dados com validação
+@st.cache_data
+def carregar_dados(file_name):
+    """Carrega um arquivo CSV e retorna um DataFrame pandas.
+    
+    Args:
+        file_name (str): Caminho do arquivo CSV.
+    
+    Returns:
+        pd.DataFrame: DataFrame com os dados carregados.
+    """
+    try:
+        df = pd.read_csv(file_name)
+        required_columns = ["nome_esc", "mun", "val"]
+        if not all(col in df.columns for col in required_columns):
+            st.error("O arquivo CSV não contém todas as colunas necessárias: 'nome_esc', 'mun', 'val'.")
+            st.stop()
+        # Renomear colunas para maior clareza
+        df = df.rename(columns={
+            "nome_esc": "nome_escola",
+            "mun": "municipio",
+            "val": "valor_arrecadado"
+        })
+        return df
+    except FileNotFoundError:
+        st.error(f"Arquivo '{file_name}' não encontrado.")
+        st.stop()
+    except Exception as e:
+        st.error(f"Erro ao carregar o arquivo: {e}")
+        st.stop()
+
+# Função para plotar valor por escola
+def plot_valor_por_escola(df, top_n=20):
+    """Gera um gráfico de barras com os valores arrecadados por escola."""
+    if df.empty:
+        st.warning("Nenhum dado disponível para o gráfico de escolas.")
+        return
+    fig, ax = plt.subplots(figsize=(12, 7))
+    sns.barplot(
+        x="nome_escola",
+        y="valor_arrecadado",
+        data=df.sort_values(by="valor_arrecadado", ascending=False).head(top_n),
+        ax=ax,
+        palette="viridis"
+    )
+    ax.set_xlabel("Nome da Escola")
+    ax.set_ylabel("Valor Arrecadado (R$)")
+    ax.set_title(f"Top {top_n} Escolas por Valor Arrecadado")
+    plt.xticks(rotation=90, fontsize=8)
+    plt.tight_layout()
+    st.pyplot(fig)
+
+# Função para plotar valor por município
+def plot_valor_por_municipio(df):
+    """Gera um gráfico de barras com os valores arrecadados por município."""
+    if df.empty:
+        st.warning("Nenhum dado disponível para o gráfico de municípios.")
+        return
+    df_agg = df.groupby("municipio")["valor_arrecadado"].sum().reset_index()
+    df_agg = df_agg.sort_values(by="valor_arrecadado", ascending=False)
+    fig, ax = plt.subplots(figsize=(12, 7))
+    sns.barplot(
+        x="municipio",
+        y="valor_arrecadado",
+        data=df_agg,
+        ax=ax,
+        palette="magma"
+    )
+    ax.set_xlabel("Município")
+    ax.set_ylabel("Valor Total Arrecadado (R$)")
+    ax.set_title("Valor Total Arrecadado por Município (R$)")
+    plt.xticks(rotation=90, fontsize=8)
+    plt.tight_layout()
+    st.pyplot(fig)
+
+# Função para exibir estatísticas descritivas
+def exibir_estatisticas(df):
+    """Exibe estatísticas descritivas formatadas."""
+    if df.empty:
+        st.warning("Nenhum dado disponível para estatísticas.")
+        return
+    stats = df[["valor_arrecadado"]].describe().reset_index().rename(columns={"index": "Estatística"})
+    st.table(stats)
+
+# Carregar dataset
+df = carregar_dados("dados_escolas.csv")
+
+# Configuração da sidebar com filtros e índice
+st.sidebar.subheader("Filtros")
+municipios_unicos = df["municipio"].unique().tolist()
+regiao_selecionada = st.sidebar.multiselect(
+    "Selecionar Municípios",
+    options=municipios_unicos,
+    default=municipios_unicos
+)
+
+# Botão para selecionar todos
+if st.sidebar.button("Selecionar Todos os Municípios"):
+    regiao_selecionada = municipios_unicos
+
+# Aplicar filtros
+df_filtrado = df[df["municipio"].isin(regiao_selecionada)]
+
+# Índice interativo com st.radio
+st.sidebar.subheader("Navegação")
+sections = [
+    "Iniciando meu primeiro app",
+    "Análise dos valores do PROGEFE em 2024",
+    "Desenvolvedora",
+    "Tema do Projeto",
+    "Estrutura do Aplicativo",
+    "Bases de Dados",
+    "Próximas Etapas",
+    "Análise de Arrecadação por Escola e Município",
+    "Dados Originais",
+    "Visão Geral dos Dados",
+    "Valor Arrecadado por Escola",
+    "Valor Arrecadado por Município",
+    "Estatísticas Descritivas"
+]
+selected_section = st.sidebar.radio("Ir para a seção:", sections, index=0)
+
+# Exibir conteúdo com base na seção selecionada
 st.markdown("---")
+if selected_section == "Iniciando meu primeiro app":
+    st.title("🚀 Iniciando meu primeiro app")
+    st.write('**Distribuição do PROGEFE nas escolas estaduais do ES em 2024.**')
+    st.text('')
+    st.markdown('📌 **Aluna**')
+    st.text('Mirella Carla Mendes Christ')
 
-# Seção 1: Apresentação
-st.header("Desenvolvedora")
-st.write("*Mirella Carla Mendes Christ*")
+elif selected_section == "Análise dos valores do PROGEFE em 2024":
+    st.title("Análise dos valores do PROGEFE em 2024")
+    st.markdown("---")
 
-# Seção 2: Tema do projeto
-st.header("Tema do Projeto")
-st.write("Distribuição dos recursos financeiros distribuidos através do PROGEFE nas escolas estaduais do ES em 2024, com dashboards regionais e por escolas e superintendências.")
-st.write("Dados fictícios")
+elif selected_section == "Desenvolvedora":
+    st.header("Desenvolvedora")
+    st.write("*Mirella Carla Mendes Christ*")
 
-# Seção 3: Estrutura do aplicativo
-st.header("Estrutura do Aplicativo")
-st.write("O aplicativo será organizado nas seguintes seções:")
+elif selected_section == "Tema do Projeto":
+    st.header("Tema do Projeto")
+    st.write("Distribuição dos recursos financeiros distribuídos através do PROGEFE nas escolas estaduais do ES em 2024, com dashboards regionais e por escolas e superintendências.")
+    st.write("Dados fictícios")
 
-col1, col2, col3 = st.columns(3)
+elif selected_section == "Estrutura do Aplicativo":
+    st.header("Estrutura do Aplicativo")
+    st.write("O aplicativo será organizado nas seguintes seções:")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.subheader("📈 Dashboard por município")
+        st.write("Visualização de valores em R$ por região geográfica")
+    with col2:
+        st.subheader("🏫 Dashboard por Escola")
+        st.write("Análise detalhada de valores em R$ por unidade escolar")
 
-with col1:
-    st.subheader("📈 Dashboard por município")
-    st.write("Visualização de valores em R$ por região geográfica")
+elif selected_section == "Bases de Dados":
+    st.header("Bases de Dados")
+    st.write("Fontes de dados que serão utilizadas no projeto:")
+    st.markdown("""
+    - Valores de distribuição dos recursos do sistema e-gestão
+    - Registros de Instituições de Ensino
+    - Dados dos valores por município
+    """)
 
-with col2:
-    st.subheader("🏫 Dashboard por Escola")
-    st.write("Análise detalhada de valores em R$ por unidade escolar")
+elif selected_section == "Próximas Etapas":
+    st.header("Próximas Etapas")
+    st.write("Para versões futuras, planejamos implementar:")
+    st.markdown("""
+    1. Gráficos interativos com zoom e tooltips
+    2. Integração com APIs para dados em tempo real
+    3. Exportação de relatórios em PDF
+    4. Filtros adicionais (por escola, valor mínimo/máximo)
+    5. Visualizações geográficas (mapas)
+    """)
 
-# Seção 4: Bases de dados
-st.header("Bases de Dados")
-st.write("Fontes de dados que serão utilizadas no projeto:")
+elif selected_section == "Análise de Arrecadação por Escola e Município":
+    st.title("Análise de Arrecadação por Escola e Município")
+    st.markdown("---")
 
-st.markdown("""
-- Valores de distribuição dos recursos do sistema e-gestão
-- Registros de Instituições de Ensino
-- Dados dos valores por município """)
+elif selected_section == "Dados Originais":
+    st.subheader("Dados Originais")
+    st.dataframe(df, height=400)
 
-# Seção 5: Próximas etapas
-st.header("Próximas Etapas")
-st.write("Para versões futuras, planejamos implementar:")
+elif selected_section == "Visão Geral dos Dados":
+    st.subheader("Visão Geral dos Dados")
+    st.dataframe(df_filtrado.head(), height=400)
+    # Botão de download
+    csv = df_filtrado.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Baixar Dados Filtrados (CSV)",
+        data=csv,
+        file_name="dados_filtrados_progefe.csv",
+        mime="text/csv"
+    )
 
-st.markdown("""
-1. Gráficos dos valores por escola
-2. Gráficos dos valores por município
-3. Dados estatísticos
-""")
+elif selected_section == "Valor Arrecadado por Escola":
+    st.subheader("Valor Arrecadado por Escola")
+    plot_valor_por_escola(df_filtrado)
+
+elif selected_section == "Valor Arrecadado por Município":
+    st.subheader("Valor Arrecadado por Município")
+    plot_valor_por_municipio(df_filtrado)
+
+elif selected_section == "Estatísticas Descritivas":
+    st.subheader("Estatísticas Descritivas")
+    exibir_estatisticas(df_filtrado)
 
 # Rodapé
 st.markdown("---")
-st.markdown("Desenvolvido por Mirella Carla Mendes Christ - 2025")
-
-# Título do aplicativo
-st.title("Análise de Arrecadação por Escola e Município")
-
-# Carregar dataset
-@st.cache_data
-def carregar_dados(name):
-    df = pd.read_csv(name)
-    return df
-
-df = carregar_dados("dados_escolas.csv")
-
-st.subheader("Dados Originais")
-st.dataframe(df)
-
-regiao_selecionada = st.sidebar.multiselect(
-    "Selecionar Região",
-    options=df["mun"].unique(),
-    default=df["mun"].unique()
-)
-
-# Aplicar filtros globais
-df_filtrado_global = df[
-    (df["mun"].isin(regiao_selecionada))
-]
-
-st.subheader(" Visão Geral dos Dados")
-st.dataframe(df_filtrado_global.head())
-
-# 1. Gráfico de Barras: Valor arrecadado por Escola
-st.subheader("Valor Arrecadado por Escola")
-fig_escola, ax_escola = plt.subplots(figsize=(12, 7))
-sns.barplot(x="nome_esc", y="val", data=df.sort_values(by="val", ascending=False).head(20), ax=ax_escola, palette="viridis")
-ax_escola.set_xlabel("Nome da Escola")
-ax_escola.set_ylabel("Valor Arrecadado R$")
-ax_escola.set_title("Top 20 Escolas por maior valor arrecadado")
-plt.xticks(rotation=90, fontsize=8)
-plt.tight_layout()
-st.pyplot(fig_escola)
-
-# 2. Gráfico de Barras: Valor arrecadado por Município
-st.subheader("Valor Arrecadado por Município")
-
-# Agrupar por município e somar os valores
-df_municipio_agg = df.groupby("mun")["val"].sum().reset_index()
-fig_municipio, ax_municipio = plt.subplots(figsize=(12, 7))
-sns.barplot(x="mun", y="val", data=df_municipio_agg.sort_values(by="val", ascending=False), ax=ax_municipio, palette="magma")
-ax_municipio.set_xlabel("Município")
-ax_municipio.set_ylabel("Valor Total Arrecadado em R$")
-ax_municipio.set_title("Valor total arrecadado pelas escolas e por munícíopio R$")
-plt.xticks(rotation=90, fontsize=8)
-plt.tight_layout()
-st.pyplot(fig_municipio)
-
-# Estatísticas Descritivas
-st.subheader("Estatísticas Descritivas")
-st.write(df.describe())
-
+st.markdown("Desenvolvido por Mirella Carla Mendes Christ - 2025 (Versão 1.0)")
