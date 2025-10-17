@@ -1,4 +1,3 @@
-# MVP mirella - Versão Refatorada com Índice Interativo na Sidebar
 # Projeto de MVP para análise de ferramentas e soluções em nuvem
 import streamlit as st
 import pandas as pd
@@ -100,7 +99,21 @@ def exibir_estatisticas(df):
 # Carregar dataset
 df = carregar_dados("dados_escolas.csv")
 
-# Configuração da sidebar com filtros e índice
+# Índice interativo com st.radio
+st.sidebar.subheader("Navegação")
+sections = [
+    "Iniciando meu primeiro app",
+    "Tema do Projeto",
+    "Estrutura do Aplicativo",
+    "Bases de Dados",
+    "Próximas Etapas",
+    "Análise de Arrecadação por Escola e Município",
+    "Visão Geral dos Dados",
+    "Valor Arrecadado por Escola",
+    "Valor Arrecadado por Município",
+    "Estatísticas Descritivas"
+]
+selected_section = st.sidebar.radio("Ir para a seção:", sections, index=0)# Configuração da sidebar com filtros e índice
 st.sidebar.subheader("Filtros")
 municipios_unicos = df["municipio"].unique().tolist()
 regiao_selecionada = st.sidebar.multiselect(
@@ -116,24 +129,6 @@ if st.sidebar.button("Selecionar Todos os Municípios"):
 # Aplicar filtros
 df_filtrado = df[df["municipio"].isin(regiao_selecionada)]
 
-# Índice interativo com st.radio
-st.sidebar.subheader("Navegação")
-sections = [
-    "Iniciando meu primeiro app",
-    "Análise dos valores do PROGEFE em 2024",
-    "Desenvolvedora",
-    "Tema do Projeto",
-    "Estrutura do Aplicativo",
-    "Bases de Dados",
-    "Próximas Etapas",
-    "Análise de Arrecadação por Escola e Município",
-    "Dados Originais",
-    "Visão Geral dos Dados",
-    "Valor Arrecadado por Escola",
-    "Valor Arrecadado por Município",
-    "Estatísticas Descritivas"
-]
-selected_section = st.sidebar.radio("Ir para a seção:", sections, index=0)
 
 # Exibir conteúdo com base na seção selecionada
 st.markdown("---")
@@ -141,17 +136,8 @@ if selected_section == "Iniciando meu primeiro app":
     st.title("🚀 Iniciando meu primeiro app")
     st.write('**Distribuição do PROGEFE nas escolas estaduais do ES em 2024.**')
     st.text('')
-    st.markdown('📌 **Aluna**')
-    st.text('Mirella Carla Mendes Christ')
-
-elif selected_section == "Análise dos valores do PROGEFE em 2024":
-    st.title("Análise dos valores do PROGEFE em 2024")
-    st.markdown("---")
-
-elif selected_section == "Desenvolvedora":
-    st.header("Desenvolvedora")
-    st.write("*Mirella Carla Mendes Christ*")
-
+    st.markdown('📌 **Aluna: Mirella Carla Mendes Christ**')
+  
 elif selected_section == "Tema do Projeto":
     st.header("Tema do Projeto")
     st.write("Distribuição dos recursos financeiros distribuídos através do PROGEFE nas escolas estaduais do ES em 2024, com dashboards regionais e por escolas e superintendências.")
@@ -190,9 +176,6 @@ elif selected_section == "Próximas Etapas":
 
 elif selected_section == "Análise de Arrecadação por Escola e Município":
     st.title("Análise de Arrecadação por Escola e Município")
-    st.markdown("---")
-
-elif selected_section == "Dados Originais":
     st.subheader("Dados Originais")
     st.dataframe(df, height=400)
 
@@ -219,7 +202,3 @@ elif selected_section == "Valor Arrecadado por Município":
 elif selected_section == "Estatísticas Descritivas":
     st.subheader("Estatísticas Descritivas")
     exibir_estatisticas(df_filtrado)
-
-# Rodapé
-st.markdown("---")
-st.markdown("Desenvolvido por Mirella Carla Mendes Christ - 2025 (Versão 1.0)")
